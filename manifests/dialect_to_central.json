@@ -1,0 +1,252 @@
+{
+  "พันพรือบ้างช่วงนี้": {
+    "text_central": "เป็นอย่างไรบ้างช่วงนี้",
+    "region": "south",
+    "utterance_id": "voice_1_1"
+  },
+  "หรอยแรง": {
+    "text_central": "อร่อยมาก",
+    "region": "south",
+    "utterance_id": "voice_10_1"
+  },
+  "หมาค็อบ": {
+    "text_central": "สุนัขกัด",
+    "region": "south",
+    "utterance_id": "voice_11_1"
+  },
+  "หลบบ้าน": {
+    "text_central": "กลับบ้าน",
+    "region": "south",
+    "utterance_id": "voice_12_1"
+  },
+  "แหลงไม่รู้เรื่อง": {
+    "text_central": "พูดไม่รู้เรื่อง",
+    "region": "south",
+    "utterance_id": "voice_13_1"
+  },
+  "ไซร้ทำพันนั้น": {
+    "text_central": "ทำไมทำอย่างนั้น",
+    "region": "south",
+    "utterance_id": "voice_14_1"
+  },
+  "พรือโฉ้ล่ะทีนี้": {
+    "text_central": "แย่แล้วล่ะทีนี้",
+    "region": "south",
+    "utterance_id": "voice_15_1"
+  },
+  "กินข้าวแล้วเมื่อหวันเที่ยง": {
+    "text_central": "กินข้าวแล้วเมื่อตอนเที่ยง",
+    "region": "south",
+    "utterance_id": "voice_16_1"
+  },
+  "นั่งตรงนี้ได้หม้าย": {
+    "text_central": "นั่งตรงนี้ได้ไหม",
+    "region": "south",
+    "utterance_id": "voice_17_1"
+  },
+  "หวังเหวิดลูกจัง": {
+    "text_central": "เป็นห่วงลูกจัง",
+    "region": "south",
+    "utterance_id": "voice_18_1"
+  },
+  "ลิวไปตรงหน้าบ้าน": {
+    "text_central": "ขว้างไปตรงหน้าบ้าน",
+    "region": "south",
+    "utterance_id": "voice_19_1"
+  },
+  "ฉานชื่อ": {
+    "text_central": "ฉันชื่อ",
+    "region": "south",
+    "utterance_id": "voice_2_1"
+  },
+  "แขบไปไหน": {
+    "text_central": "จะรีบไปไหน",
+    "region": "south",
+    "utterance_id": "voice_20_1"
+  },
+  "แม่ค้ามีผั๊กเหน๊าะหม้าย": {
+    "text_central": "แม่ค้ามีผักแกล้มไหม",
+    "region": "south",
+    "utterance_id": "voice_21_1"
+  },
+  "วันนี้แม่ทำใบเหลีบงตมเถให้กิน": {
+    "text_central": "วันนี้แม่ทำใบเหลียงต้มกะทิให้กิน",
+    "region": "south",
+    "utterance_id": "voice_22_1"
+  },
+  "อยากกินผั้ดหลูกต๋อ": {
+    "text_central": "อยากกินผัดสะตอ",
+    "region": "south",
+    "utterance_id": "voice_23_1"
+  },
+  "สั่งน้ำฉุบมากัน": {
+    "text_central": "สั่งน้ำพริกมาด้วย",
+    "region": "south",
+    "utterance_id": "voice_24_1"
+  },
+  "เคยกินน้ำชุบเคยหม้าย": {
+    "text_central": "เคยกินน้ำพริกกะปิไหม",
+    "region": "south",
+    "utterance_id": "voice_25_1"
+  },
+  "จะไปไหนหลาววันนี้": {
+    "text_central": "วันนี้จะไปไหนเหรอ",
+    "region": "south",
+    "utterance_id": "voice_26_1"
+  },
+  "ลงป้ายหน้ากันครับนายหัว": {
+    "text_central": "จอดป้ายหน้าด้วยน่ะครับ",
+    "region": "south",
+    "utterance_id": "voice_27_1"
+  },
+  "ไปไหนครับพี่บาว": {
+    "text_central": "ไปไหนครับพี่ชาย",
+    "region": "south",
+    "utterance_id": "voice_28_1"
+  },
+  "ซื้อโกปี้ให้ที": {
+    "text_central": "ซื้อกาแฟให้หน่อย",
+    "region": "south",
+    "utterance_id": "voice_29_1"
+  },
+  "ผมชื่อ": {
+    "text_central": "ผมชื่อ",
+    "region": "south",
+    "utterance_id": "voice_3_1"
+  },
+  "อย่าขับรถลกลก": {
+    "text_central": "อย่าขับรถลนลาน",
+    "region": "south",
+    "utterance_id": "voice_30_1"
+  },
+  "แม่หวิบแล้วนั้น": {
+    "text_central": "แม่โกรธแล้วนะ",
+    "region": "south",
+    "utterance_id": "voice_31_1"
+  },
+  "เธอขี้หก": {
+    "text_central": "เธอโกหก",
+    "region": "south",
+    "utterance_id": "voice_32_1"
+  },
+  "สาวนี้อ้อร้อคาด": {
+    "text_central": "ผู้หญิงคนนี้เจ้าชู้",
+    "region": "south",
+    "utterance_id": "voice_33_1"
+  },
+  "หัวเราะได้แรงอก": {
+    "text_central": "หัวเราะได้สะใจมาก",
+    "region": "south",
+    "utterance_id": "voice_34_1"
+  },
+  "พี่บาวโบ่จังครับ": {
+    "text_central": "พี่ชายโง่จังครับ",
+    "region": "south",
+    "utterance_id": "voice_35_1"
+  },
+  "นอนหวันแยงโมง": {
+    "text_central": "นอนกินบ้านกินเมือง",
+    "region": "south",
+    "utterance_id": "voice_36_1"
+  },
+  "แต่วาฝนตกหนักชาด": {
+    "text_central": "เมื่อวานฝนตกหนักมาก",
+    "region": "south",
+    "utterance_id": "voice_37_1"
+  },
+  "เดี๋ยวต่อเช้าค่อยแวะไป": {
+    "text_central": "เดี๋ยวพรุ่งนี้ค่อยแวะไป",
+    "region": "south",
+    "utterance_id": "voice_38_1"
+  },
+  "ร้อนคาด": {
+    "text_central": "ร้อนมากๆ",
+    "region": "south",
+    "utterance_id": "voice_39_1"
+  },
+  "สบายดีหม้าย": {
+    "text_central": "สบายดีไหม",
+    "region": "south",
+    "utterance_id": "voice_4_1"
+  },
+  "ฝนตกแล้วหลาว": {
+    "text_central": "ฝนตกอีกแล้ว",
+    "region": "south",
+    "utterance_id": "voice_40_1"
+  },
+  "ป่วยหม้ายหลาว": {
+    "text_central": "ไม่สบายหรือเปล่า",
+    "region": "south",
+    "utterance_id": "voice_41_1"
+  },
+  "ซัดน้ำเยอะๆ": {
+    "text_central": "ดื่มน้ำเยอะ ๆ",
+    "region": "south",
+    "utterance_id": "voice_42_1"
+  },
+  "ปวดหัวหม้าย": {
+    "text_central": "ปวดหัวไหม",
+    "region": "south",
+    "utterance_id": "voice_43_1"
+  },
+  "คัดพุงจังช่วงนี้": {
+    "text_central": "แน่นท้องจังช่วงนี้",
+    "region": "south",
+    "utterance_id": "voice_44_1"
+  },
+  "เฉียวฉาว": {
+    "text_central": "ไม่สบายตัว",
+    "region": "south",
+    "utterance_id": "voice_45_1"
+  },
+  "ไอ้ยะ": {
+    "text_central": "ตกใจ",
+    "region": "south",
+    "utterance_id": "voice_46_1"
+  },
+  "ฮาย": {
+    "text_central": "รำคาญ",
+    "region": "south",
+    "utterance_id": "voice_47_1"
+  },
+  "อะโต๊ย": {
+    "text_central": "ปัดโธ่",
+    "region": "south",
+    "utterance_id": "voice_48_1"
+  },
+  "ไอ้หย่า": {
+    "text_central": "ประหลาดใจ",
+    "region": "south",
+    "utterance_id": "voice_49_1"
+  },
+  "เอิ้วกินข้าว": {
+    "text_central": "กินข้าวไหม",
+    "region": "south",
+    "utterance_id": "voice_5_1"
+  },
+  "บะลักกัก": {
+    "text_central": "ใหญ่โตมาก",
+    "region": "south",
+    "utterance_id": "voice_50_1"
+  },
+  "ตื่นแต่หัวเช้า": {
+    "text_central": "ตื่นแต่เช้า",
+    "region": "south",
+    "utterance_id": "voice_6_1"
+  },
+  "ขี้เกียจลุกจังฮู้": {
+    "text_central": "ขี้เกียจลุกจังเลย",
+    "region": "south",
+    "utterance_id": "voice_7_1"
+  },
+  "เนือยช่วยทำอะไรให้กินที": {
+    "text_central": "หิวมากช่วยทำอะไรให้กินหน่อย",
+    "region": "south",
+    "utterance_id": "voice_8_1"
+  },
+  "หวังเหวิดแม่": {
+    "text_central": "เป็นห่วงแม่",
+    "region": "south",
+    "utterance_id": "voice_9_1"
+  }
+}
