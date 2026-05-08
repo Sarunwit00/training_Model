@@ -21,7 +21,8 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 import torch
-from datasets import Audio, load_dataset
+import librosa
+from datasets import load_dataset
 from transformers import (
     Trainer,
     TrainingArguments,
@@ -103,7 +104,7 @@ def main():
     args.num_workers = safe_num_workers(args.num_workers)
 
     # ------------------------------------------------------------------
-    # 1. Load dataset
+    # 1. Load dataset (manifest only, audio loaded later via librosa)
     # ------------------------------------------------------------------
     train_path = MANIFESTS / "train.jsonl"
     val_path = MANIFESTS / "val.jsonl"
@@ -123,12 +124,6 @@ def main():
                      "  Either run without --skip_augmented OR use build_manifest.py instead.\n")
         print(f"  Train: {len(ds['train'])} | Val: {len(ds['val'])}")
 
-    def _resolve(ex):
-        ex["audio_filepath"] = str(ROOT / ex["audio_filepath"])
-        return ex
-
-    ds = ds.map(_resolve)
-    ds = ds.cast_column("audio_filepath", Audio(sampling_rate=16000))
     print("Dataset:", ds)
 
     # ------------------------------------------------------------------
@@ -139,11 +134,20 @@ def main():
     processor.save_pretrained(args.output_dir)
 
     # ------------------------------------------------------------------
-    # 3. Prepare features
+    # 3. Prepare features (โหลด audio ผ่าน librosa เอง — ไม่พึ่ง torchcodec)
     # ------------------------------------------------------------------
     def prepare(example):
-        audio = example["audio_filepath"]
-        example["input_values"] = processor(audio["array"], sampling_rate=16000).input_values[0]
+        # Resolve relative path -> absolute
+        wav_path = example["audio_filepath"]
+        if not os.path.isabs(wav_path):
+            wav_path = str(ROOT / wav_path)
+
+        # Load audio via librosa (no torchcodec dependency)
+        audio_array, _ = librosa.load(wav_path, sr=16000, mono=True)
+
+        # Feature extract
+        example["input_values"] = processor(audio_array, sampling_rate=16000).input_values[0]
+        # Tokenize transcript
         example["labels"] = processor(text=example[args.target]).input_ids
         return example
 
@@ -167,7 +171,6 @@ def main():
     )
 
     # CRITICAL FIX: save model config early so output_dir always has config.json
-    # even if training is interrupted
     model.config.save_pretrained(args.output_dir)
     print(f"Saved model config.json at {args.output_dir}")
 
