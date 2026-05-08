@@ -218,15 +218,19 @@ def main():
     training_args = make_training_args(args, use_fp16, use_bf16)
     data_collator = DataCollatorCTCWithPadding(processor=processor)
 
-    trainer = Trainer(
+    trainer_kwargs = dict(
         model=model,
         data_collator=data_collator,
         args=training_args,
         compute_metrics=compute_metrics,
         train_dataset=ds["train"],
         eval_dataset=ds["val"],
-        tokenizer=processor.feature_extractor,
     )
+    # transformers >= 4.46 renamed `tokenizer` to `processing_class`
+    try:
+        trainer = Trainer(processing_class=processor.feature_extractor, **trainer_kwargs)
+    except TypeError:
+        trainer = Trainer(tokenizer=processor.feature_extractor, **trainer_kwargs)
 
     if args.resume_from_checkpoint:
         ckpt = args.resume_from_checkpoint
