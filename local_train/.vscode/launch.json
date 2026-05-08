@@ -2,6 +2,23 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "🔧 Step 0 (optional): Fix Audio (resample + rename)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/fix_audio.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "🔍 Step 0 (optional): Fix Audio — DRY RUN",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/fix_audio.py",
+            "cwd": "${workspaceFolder}",
+            "args": ["--dry_run"],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "🔧 Step 1: Build Manifest",
             "type": "debugpy",
             "request": "launch",
@@ -19,7 +36,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "🏋️ Step 3a: Sanity Check (5 epochs)",
+            "name": "🏋️ Step 3a: Sanity Check (5 epochs, original split)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/scripts/train_wav2vec2.py",
@@ -55,15 +72,27 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "🎤 Step 4: Test Inference (เลือกไฟล์)",
+            "name": "🏋️ Step 3c: Resume Training",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/train_wav2vec2.py",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--output_dir", "models/wav2vec2-south-th-v2",
+                "--resume_from_checkpoint", "${input:checkpointPath}"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "🎤 Step 4: Test Inference",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/scripts/inference.py",
             "cwd": "${workspaceFolder}",
             "args": [
+                "${input:wavFilePath}",
                 "--model", "models/wav2vec2-south-th-v2",
-                "--translate",
-                "${input:wavFilePath}"
+                "--translate"
             ],
             "console": "integratedTerminal"
         },
@@ -73,9 +102,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/scripts/export_model.py",
             "cwd": "${workspaceFolder}",
-            "args": [
-                "--model_dir", "models/wav2vec2-south-th-v2"
-            ],
+            "args": ["--model_dir", "models/wav2vec2-south-th-v2"],
             "console": "integratedTerminal"
         },
         {
@@ -84,10 +111,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/scripts/export_model.py",
             "cwd": "${workspaceFolder}",
-            "args": [
-                "--model_dir", "models/wav2vec2-south-th-v2",
-                "--no_zip"
-            ],
+            "args": ["--model_dir", "models/wav2vec2-south-th-v2", "--no_zip"],
             "console": "integratedTerminal"
         }
     ],
@@ -95,8 +119,14 @@
         {
             "id": "wavFilePath",
             "type": "promptString",
-            "description": "Path ไฟล์ .wav (เช่น audio_data/south/voice_1/voice_1_1.wav)",
+            "description": "Path ไฟล์ .wav",
             "default": "audio_data/south/voice_1/voice_1_1.wav"
+        },
+        {
+            "id": "checkpointPath",
+            "type": "promptString",
+            "description": "Path ของ checkpoint",
+            "default": "models/wav2vec2-south-th-v2/checkpoint-1000"
         }
     ]
 }
