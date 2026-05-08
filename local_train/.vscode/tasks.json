@@ -1,0 +1,29 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "🔧 Setup: Install dependencies",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/pip.exe",
+            "args": ["install", "-r", "requirements.txt"],
+            "problemMatcher": []
+        },
+        {
+            "label": "🧪 Test: Verify setup",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/Scripts/python.exe",
+            "args": [
+                "-c",
+                "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"none\"}')"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "🗑️ Clean: Remove checkpoints",
+            "type": "shell",
+            "command": "powershell",
+            "args": ["-Command", "Get-ChildItem -Path 'models' -Filter 'checkpoint-*' -Recurse | Remove-Item -Recurse -Force; echo 'cleaned'"],
+            "problemMatcher": []
+        }
+    ]
+}

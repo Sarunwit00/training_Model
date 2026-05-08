@@ -1,0 +1,18 @@
+# Virtual environment
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Data folders (เปลี่ยนเป็น symlink หรือไม่อัพ git)
+audio_data/
+
+# Generated
+manifests/
+models/
+exports/
+
+# OS
+.DS_Store
+Thumbs.db
