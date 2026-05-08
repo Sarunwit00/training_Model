@@ -8,7 +8,7 @@
 
 1. เปิด [drive.google.com](https://drive.google.com)
 2. สร้าง folder `Data_Project` ที่ My Drive
-3. อัพโหลด **ทั้งโฟลเดอร์ Data_Project** ขึ้นไป (จะมี `audio_data/`, `manifests/`, `scripts/`, ฯลฯ)
+3. อัพโหลด **ทั้งโฟลเดอร์ Data_Project** ขึ้นไป (จะมี `audio_data/`, `manifests/`, `colab/`, ฯลฯ)
 4. รอจนอัพโหลดเสร็จ — ขนาดประมาณ 250–300 MB อาจใช้เวลา 5–15 นาที
 
 ### 2. เปิด Notebook
@@ -19,11 +19,11 @@
 
 1. เปิด [colab.research.google.com](https://colab.research.google.com)
 2. กด `File → Upload notebook`
-3. เลือกไฟล์ `wav2vec2_finetune_colab.ipynb`
+3. เลือกไฟล์ `colab/wav2vec2_finetune_colab.ipynb`
 
 **วิธี B — เปิดจาก Drive (ถ้าอัพ notebook ขึ้น Drive ด้วย)**
 
-1. ไปที่ folder ใน Drive
+1. ไปที่ folder `Data_Project/colab/` ใน Drive
 2. คลิกขวาที่ `wav2vec2_finetune_colab.ipynb` → `Open with → Google Colaboratory`
 
 ### 3. ตั้ง GPU Runtime
