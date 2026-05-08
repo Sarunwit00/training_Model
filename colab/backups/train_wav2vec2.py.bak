@@ -161,12 +161,10 @@ def main():
         example["input_values"] = processor(
             audio["array"], sampling_rate=16000
         ).input_values[0]
-        # input_length needed for group_by_length (safe speed optimization)
-        example["input_length"] = len(example["input_values"])
         example["labels"] = processor(text=example[args.target]).input_ids
         return example
 
-    keep_cols = ["input_values", "input_length", "labels"]
+    keep_cols = ["input_values", "labels"]
     ds = ds.map(
         prepare,
         remove_columns=[c for c in ds["train"].column_names if c not in keep_cols],
@@ -229,10 +227,6 @@ def main():
         metric_for_best_model="wer",
         greater_is_better=False,
         report_to="none",
-        # ── Safe speed optimizations (no accuracy impact) ──────────────────
-        group_by_length=True,                  # ลด padding waste ในแต่ละ batch
-        length_column_name="input_length",     # ใช้คู่กับ group_by_length
-        dataloader_pin_memory=True,            # data → GPU เร็วขึ้น
     )
 
     data_collator = DataCollatorCTCWithPadding(processor=processor)
@@ -244,14 +238,4 @@ def main():
         compute_metrics=compute_metrics,
         train_dataset=ds["train"],
         eval_dataset=ds["val"],
-        tokenizer=processor.feature_extractor,
-    )
-
-    trainer.train()
-    trainer.save_model(args.output_dir)
-    processor.save_pretrained(args.output_dir)
-    print(f"\nDone. Best model saved to: {args.output_dir}")
-
-
-if __name__ == "__main__":
-    main()
+        tokenizer=proc
