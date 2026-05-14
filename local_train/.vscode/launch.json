@@ -15,7 +15,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/scripts/fix_audio.py",
             "cwd": "${workspaceFolder}",
-            "args": ["--dry_run"],
+            "args": [
+                "--dry_run"
+            ],
             "console": "integratedTerminal"
         },
         {
@@ -32,7 +34,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/scripts/prepare_vocab.py",
             "cwd": "${workspaceFolder}",
-            "args": ["--target", "text_dialect"],
+            "args": [
+                "--target",
+                "text_dialect"
+            ],
             "console": "integratedTerminal"
         },
         {
@@ -43,11 +48,16 @@
             "cwd": "${workspaceFolder}",
             "args": [
                 "--skip_augmented",
-                "--epochs", "5",
-                "--batch_size", "4",
-                "--eval_steps", "50",
-                "--save_steps", "50",
-                "--output_dir", "models/sanity-check"
+                "--epochs",
+                "5",
+                "--batch_size",
+                "4",
+                "--eval_steps",
+                "50",
+                "--save_steps",
+                "50",
+                "--output_dir",
+                "models/sanity-check"
             ],
             "console": "integratedTerminal"
         },
@@ -58,16 +68,26 @@
             "program": "${workspaceFolder}/scripts/train_wav2vec2.py",
             "cwd": "${workspaceFolder}",
             "args": [
-                "--base_model", "airesearch/wav2vec2-large-xlsr-53-th",
-                "--target", "text_dialect",
-                "--epochs", "30",
-                "--batch_size", "4",
-                "--gradient_accumulation_steps", "4",
-                "--lr", "3e-4",
-                "--warmup_steps", "500",
-                "--eval_steps", "200",
-                "--save_steps", "200",
-                "--output_dir", "models/wav2vec2-south-th-v2"
+                "--base_model",
+                "airesearch/wav2vec2-large-xlsr-53-th",
+                "--target",
+                "text_dialect",
+                "--epochs",
+                "30",
+                "--batch_size",
+                "4",
+                "--gradient_accumulation_steps",
+                "4",
+                "--lr",
+                "3e-4",
+                "--warmup_steps",
+                "500",
+                "--eval_steps",
+                "200",
+                "--save_steps",
+                "200",
+                "--output_dir",
+                "models/wav2vec2-south-th-v2"
             ],
             "console": "integratedTerminal"
         },
@@ -78,8 +98,48 @@
             "program": "${workspaceFolder}/scripts/train_wav2vec2.py",
             "cwd": "${workspaceFolder}",
             "args": [
-                "--output_dir", "models/wav2vec2-south-th-v2",
-                "--resume_from_checkpoint", "${input:checkpointPath}"
+                "--output_dir",
+                "models/wav2vec2-south-th-v2",
+                "--resume_from_checkpoint",
+                "${input:checkpointPath}"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "🎮 RTX 3050 4GB: Fast Training Preset",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/train_wav2vec2.py",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--base_model",
+                "airesearch/wav2vec2-large-xlsr-53-th",
+                "--target",
+                "text_dialect",
+                "--output_dir",
+                "models/wav2vec2-south-th-fast",
+                "--epochs",
+                "5",
+                "--batch_size",
+                "1",
+                "--gradient_accumulation_steps",
+                "8",
+                "--lr",
+                "1e-4",
+                "--warmup_steps",
+                "100",
+                "--eval_steps",
+                "200",
+                "--save_steps",
+                "200",
+                "--weight_decay",
+                "0.005",
+                "--max_audio_seconds",
+                "3.5",
+                "--max_train_samples",
+                "1000",
+                "--num_workers",
+                "0"
             ],
             "console": "integratedTerminal"
         },
@@ -91,7 +151,8 @@
             "cwd": "${workspaceFolder}",
             "args": [
                 "${input:wavFilePath}",
-                "--model", "models/wav2vec2-south-th-v2",
+                "--model",
+                "models/wav2vec2-south-th-v2",
                 "--translate"
             ],
             "console": "integratedTerminal"
@@ -102,7 +163,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/scripts/export_model.py",
             "cwd": "${workspaceFolder}",
-            "args": ["--model_dir", "models/wav2vec2-south-th-v2"],
+            "args": [
+                "--model_dir",
+                "models/wav2vec2-south-th-v2"
+            ],
             "console": "integratedTerminal"
         },
         {
@@ -111,7 +175,11 @@
             "request": "launch",
             "program": "${workspaceFolder}/scripts/export_model.py",
             "cwd": "${workspaceFolder}",
-            "args": ["--model_dir", "models/wav2vec2-south-th-v2", "--no_zip"],
+            "args": [
+                "--model_dir",
+                "models/wav2vec2-south-th-v2",
+                "--no_zip"
+            ],
             "console": "integratedTerminal"
         }
     ],

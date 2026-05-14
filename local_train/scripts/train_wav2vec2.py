@@ -125,6 +125,10 @@ def main():
     ap.add_argument("--resume_from_checkpoint", type=str, default=None)
     ap.add_argument("--bf16", action="store_true")
     ap.add_argument("--no_freeze_encoder", action="store_true")
+    ap.add_argument("--max_train_samples", type=int, default=None,
+                    help="Limit training set size (useful for fast experiments)")
+    ap.add_argument("--max_audio_seconds", type=float, default=None,
+                    help="Drop clips longer than this (saves VRAM)")
     args = ap.parse_args()
 
     args.num_workers = safe_num_workers(args.num_workers)
@@ -163,6 +167,20 @@ def main():
         example["input_values"] = processor(audio_array, sampling_rate=16000).input_values[0]
         example["labels"] = processor(text=example[args.target]).input_ids
         return example
+
+    # Filter by audio length (for limited VRAM)
+    if args.max_audio_seconds is not None:
+        before = {k: len(v) for k, v in ds.items()}
+        ds = ds.filter(lambda ex: ex["duration"] <= args.max_audio_seconds)
+        after = {k: len(v) for k, v in ds.items()}
+        print(f"Filtered by max_audio_seconds={args.max_audio_seconds}:")
+        for k in before:
+            print(f"  {k}: {before[k]} -> {after[k]}")
+
+    # Subsample training set for fast experiments
+    if args.max_train_samples is not None and len(ds["train"]) > args.max_train_samples:
+        ds["train"] = ds["train"].shuffle(seed=42).select(range(args.max_train_samples))
+        print(f"Subsampled train set to {len(ds['train'])} clips")
 
     keep_cols = ["input_values", "labels"]
     ds = ds.map(
