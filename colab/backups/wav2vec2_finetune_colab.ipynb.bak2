@@ -20,38 +20,32 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# Fine-tune Wav2Vec2 (Thai XLS-R) สำหรับเสียงภาษาไทยถิ่น 3 ภาค (ใต้/เหนือ/อีสาน)\n",
+    "# Fine-tune Wav2Vec2 (Thai XLS-R) สำหรับเสียงภาษาใต้\n",
     "\n",
-    "Notebook นี้ใช้ fine-tune โมเดล [`airesearch/wav2vec2-large-xlsr-53-th`](https://huggingface.co/airesearch/wav2vec2-large-xlsr-53-th) ให้รู้จำเสียงภาษาไทยถิ่น **ใต้ + เหนือ + อีสาน** ในโมเดลเดียว แล้วแปลงเป็นข้อความภาษาไทยกลาง\n",
+    "Notebook นี้ใช้ fine-tune โมเดล [`airesearch/wav2vec2-large-xlsr-53-th`](https://huggingface.co/airesearch/wav2vec2-large-xlsr-53-th) ให้รู้จำเสียงภาษาไทยถิ่นใต้ แล้วแปลงเป็นข้อความภาษาไทยกลาง\n",
     "\n",
     "## 📋 สิ่งที่ Notebook นี้ทำ\n",
     "\n",
     "```\n",
-    "ไฟล์เสียง .wav  ─→  Wav2Vec2 fine-tuned  ─→  ข้อความภาษาถิ่น  ─→  Lookup table  ─→  ข้อความภาษากลาง\n",
-    "                    (multi-dialect)         (south/north/isan)\n",
+    "ไฟล์เสียง .wav  ─→  Wav2Vec2 fine-tuned  ─→  ข้อความภาษาใต้  ─→  Lookup table  ─→  ข้อความภาษากลาง\n",
     "```\n",
     "\n",
     "## ⚙️ ก่อนเริ่ม\n",
     "\n",
-    "1. ตั้ง runtime เป็น **GPU**: `Runtime → Change runtime type → T4 GPU` (แนะนำ A100 ถ้ามี Colab Pro)\n",
-    "2. อัพโหลดโฟลเดอร์ `Data_Project` ทั้งหมดขึ้น Google Drive (~3–5 GB หลังเพิ่ม north + isan)\n",
+    "1. ตั้ง runtime เป็น **GPU**: `Runtime → Change runtime type → T4 GPU`\n",
+    "2. อัพโหลดโฟลเดอร์ `Data_Project` ทั้งหมดขึ้น Google Drive\n",
     "3. แก้ตัวแปร `DRIVE_PATH` ในเซลล์ #2 ให้ตรงกับ path ใน Drive\n",
     "\n",
-    "## ⏱️ เวลาที่ใช้ (โดยประมาณ) — หลังเพิ่ม north + isan\n",
+    "## ⏱️ เวลาที่ใช้ (โดยประมาณ)\n",
     "\n",
     "| ขั้นตอน | T4 (Colab ฟรี) | A100/V100 (Pro) |\n",
     "|---|---|---|\n",
-    "| Setup + Build manifest + Vocab | 10–15 นาที | 10 นาที |\n",
-    "| Sanity check (3 epochs, originals only) | 10–15 นาที | 5 นาที |\n",
-    "| **Full training (10 epochs, ~120k clips)** | **20–30 ชั่วโมง** ⚠️ | 6–10 ชั่วโมง |\n",
-    "| Inference + Eval (test ~15k clips) | 30–40 นาที | 10–15 นาที |\n",
+    "| Setup + Build manifest + Vocab | 5 นาที | 5 นาที |\n",
+    "| Sanity check (5 epochs) | 10–15 นาที | 5 นาที |\n",
+    "| **Full training (30 epochs)** | **3–5 ชั่วโมง** | 1–2 ชั่วโมง |\n",
+    "| Inference + Eval | 5 นาที | 2 นาที |\n",
     "\n",
-    "⚠️ Colab ฟรี (T4, จำกัด ~12 ชม./session) **ไม่พอ** สำหรับ training เต็ม — แนะนำ:\n",
-    "- ใช้ Colab Pro/A100, หรือ\n",
-    "- ลด epochs เหลือ 5, หรือ\n",
-    "- Resume ข้าม session โดย save checkpoint ลง Drive แล้วใช้ `--resume_from_checkpoint`\n",
-    "\n",
-    "---"
+    "---\n"
    ]
   },
   {
@@ -86,30 +80,11 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## Cell 1.2 — กำหนด Path และเตรียม Data บน Colab Disk\n",
+    "## Cell 1.2 — กำหนด Path และ Copy Data ลง Colab Disk\n",
     "\n",
-    "⚠️ **ต้องแก้:** ตั้ง `DRIVE_PATH` ให้ตรงกับสิ่งที่อัพไว้ใน Drive\n",
+    "⚠️ **ต้องแก้:** ถ้าโฟลเดอร์ `Data_Project` ของคุณไม่ได้อยู่ที่ root ของ Drive ให้แก้ `DRIVE_PATH` ให้ตรง\n",
     "\n",
-    "Cell นี้ **auto-detect** ได้ทั้ง 2 แบบ:\n",
-    "\n",
-    "| รูปแบบ | DRIVE_PATH | คำแนะนำ |\n",
-    "|---|---|---|\n",
-    "| 📁 **โฟลเดอร์** (audio_data + colab) | `/content/drive/MyDrive/Data_Project` | ง่าย แต่ upload ช้า (มีไฟล์เยอะ) |\n",
-    "| 🗜️ **ไฟล์ zip** (แนะนำ) | `/content/drive/MyDrive/Data_Project.zip` | upload เร็วกว่า 10–30 เท่า |\n",
-    "\n",
-    "### โครงสร้างที่ Cell นี้คาดหวัง\n",
-    "\n",
-    "ไม่ว่า DRIVE_PATH จะเป็นโฟลเดอร์หรือ zip ภายในต้องมี:\n",
-    "```\n",
-    "<root>/\n",
-    "├── audio_data/     ← จำเป็น (ไฟล์เสียง)\n",
-    "└── colab/          ← จำเป็น (scripts + notebook)\n",
-    "```\n",
-    "ส่วน `manifests/` และ `models/` ไม่ต้องอัพ — script จะสร้างให้เอง\n",
-    "\n",
-    "### ทำไมต้อง copy/extract มาที่ Colab disk?\n",
-    "\n",
-    "Colab อ่านไฟล์จาก Drive ช้ามาก (ช้ากว่า local disk ~10 เท่า) การคัดลอกหรือแตก zip มาที่ `/content/` ก่อนทำให้เทรนเร็วขึ้นมาก"
+    "**ทำไมต้อง copy:** Colab อ่านไฟล์จาก Drive ช้ามาก (ช้ากว่า local disk ~10 เท่า) การคัดลอกมาก่อนทำให้เทรนเร็วขึ้นมาก\n"
    ]
   },
   {
@@ -118,83 +93,24 @@
    "execution_count": null,
    "outputs": [],
    "source": [
-    "# ⚠️ แก้ DRIVE_PATH ให้ตรงกับสิ่งที่อัพไว้ใน Drive\n",
-    "# - ถ้าอัพเป็น folder: '/content/drive/MyDrive/Data_Project'\n",
-    "# - ถ้าอัพเป็น zip   : '/content/drive/MyDrive/Data_Project.zip'\n",
+    "# ⚠️ แก้ path นี้ให้ตรงกับโฟลเดอร์ Data_Project ของคุณใน Drive\n",
     "DRIVE_PATH = '/content/drive/MyDrive/Data_Project'\n",
     "\n",
     "# โฟลเดอร์ทำงานบน Colab disk (เร็วกว่า Drive มาก)\n",
     "WORK_DIR = '/content/Data_Project'\n",
     "\n",
-    "import os, shutil, zipfile, time\n",
+    "import os, shutil\n",
     "\n",
-    "def _find_project_root(start_dir):\n",
-    "    \"\"\"หาโฟลเดอร์ที่มี audio_data/ + colab/ อยู่ภายใน (สำหรับกรณี zip มี nested folder)\"\"\"\n",
-    "    from pathlib import Path\n",
-    "    root = Path(start_dir)\n",
-    "    if (root / 'audio_data').is_dir() and (root / 'colab').is_dir():\n",
-    "        return str(root)\n",
-    "    for sub in root.iterdir():\n",
-    "        if sub.is_dir() and (sub / 'audio_data').is_dir() and (sub / 'colab').is_dir():\n",
-    "            return str(sub)\n",
-    "    return None\n",
-    "\n",
-    "if os.path.exists(WORK_DIR) and os.path.isdir(WORK_DIR) and os.listdir(WORK_DIR):\n",
-    "    print(f'✅ Dataset อยู่ที่ {WORK_DIR} แล้ว (ข้าม copy/extract)')\n",
-    "elif DRIVE_PATH.endswith('.zip'):\n",
-    "    # ── โหมด zip: extract มาที่ Colab disk ────────────────────────────────\n",
-    "    if not os.path.exists(DRIVE_PATH):\n",
-    "        raise FileNotFoundError(f'ไม่พบไฟล์ zip ที่ {DRIVE_PATH} — แก้ DRIVE_PATH ให้ถูก')\n",
-    "    size_mb = os.path.getsize(DRIVE_PATH) / 1e6\n",
-    "    print(f'🗜️  ตรวจพบไฟล์ zip ({size_mb:,.0f} MB) — กำลังแตก ...')\n",
-    "    t0 = time.time()\n",
-    "    extract_to = '/content/_extract_tmp'\n",
-    "    if os.path.exists(extract_to):\n",
-    "        shutil.rmtree(extract_to)\n",
-    "    os.makedirs(extract_to)\n",
-    "    with zipfile.ZipFile(DRIVE_PATH, 'r') as zf:\n",
-    "        zf.extractall(extract_to)\n",
-    "    # หา project root ใน zip (zip อาจมี Data_Project/ ครอบ หรือไม่ก็ได้)\n",
-    "    root = _find_project_root(extract_to)\n",
-    "    if root is None:\n",
-    "        raise RuntimeError(\n",
-    "            f'แตก zip แล้วไม่พบ audio_data/ + colab/ — ตรวจโครงสร้าง zip:\\n'\n",
-    "            f'  zip ต้องมี audio_data/ และ colab/ อยู่ใน root หรือใน subfolder ชั้นเดียว'\n",
-    "        )\n",
-    "    if root != WORK_DIR:\n",
-    "        shutil.move(root, WORK_DIR)\n",
-    "    # ลบ tmp ที่เหลือ\n",
-    "    if os.path.exists(extract_to):\n",
-    "        shutil.rmtree(extract_to, ignore_errors=True)\n",
-    "    print(f'✅ แตก zip เสร็จใน {time.time()-t0:.0f} วินาที')\n",
-    "elif os.path.isdir(DRIVE_PATH):\n",
-    "    # ── โหมด folder: copy จาก Drive ──────────────────────────────────────\n",
-    "    if _find_project_root(DRIVE_PATH) is None:\n",
-    "        raise RuntimeError(\n",
-    "            f'{DRIVE_PATH} ไม่มี audio_data/ + colab/ — ตรวจว่าอัพถูกตำแหน่ง'\n",
-    "        )\n",
-    "    print(f'📁 ตรวจพบโฟลเดอร์ — กำลัง copy {DRIVE_PATH} → {WORK_DIR}')\n",
-    "    print('   (อาจใช้เวลา 15–30 นาที สำหรับ data ~3–5 GB)')\n",
-    "    t0 = time.time()\n",
+    "if not os.path.exists(WORK_DIR):\n",
+    "    print(f'กำลัง copy dataset จาก Drive → Colab disk ...')\n",
     "    shutil.copytree(DRIVE_PATH, WORK_DIR)\n",
-    "    print(f'✅ Copy เสร็จใน {(time.time()-t0)/60:.1f} นาที')\n",
+    "    print('✅ เสร็จสิ้น')\n",
     "else:\n",
-    "    raise FileNotFoundError(\n",
-    "        f'ไม่พบ {DRIVE_PATH}\\n'\n",
-    "        f'  • ถ้าใช้ folder: ตรวจว่าโฟลเดอร์มีอยู่จริงและมี audio_data/ + colab/\\n'\n",
-    "        f'  • ถ้าใช้ zip:    ตรวจว่าไฟล์ .zip มีอยู่และ path ลงท้ายด้วย .zip'\n",
-    "    )\n",
+    "    print(f'✅ Dataset อยู่ที่ {WORK_DIR} แล้ว')\n",
     "\n",
     "os.chdir(WORK_DIR)\n",
-    "print(f'\\n📂 ตำแหน่งงาน: {os.getcwd()}')\n",
-    "print(f'\\nไฟล์ภายใน:')\n",
-    "!ls\n",
-    "\n",
-    "# ตรวจขั้นต้น\n",
-    "for required in ['audio_data', 'colab']:\n",
-    "    if not os.path.isdir(required):\n",
-    "        raise RuntimeError(f'ขาดโฟลเดอร์ {required}/ — pipeline ใช้ไม่ได้')\n",
-    "print('\\n✅ พบ audio_data/ + colab/ พร้อมเริ่ม')"
+    "print(f'\\nไฟล์ในโฟลเดอร์:')\n",
+    "!ls\n"
    ]
   },
   {
@@ -254,19 +170,15 @@
     "1. สร้าง **manifest** (ไฟล์ JSONL ที่บอกว่าแต่ละคลิปอยู่ที่ไหน + transcript คืออะไร)\n",
     "2. สร้าง **vocabulary** (ตัวอักษรไทยทั้งหมดที่ปรากฏในข้อมูล)\n",
     "\n",
-    "## 🎯 ทำไมใช้ `build_manifest_v3.py` (Plan B — multi-dialect)?\n",
+    "## 🎯 ทำไมใช้ `build_manifest_v2.py` (Path C)?\n",
     "\n",
-    "ประวัติ version:\n",
-    "- `build_manifest.py` (v1): speaker split → CER ~37% เพราะ test มี utterance ที่ไม่เคยเห็น\n",
-    "- `build_manifest_v2.py` (v2): augmentation split สำหรับ south เท่านั้น → ไม่ทำงานกับ north/isan ที่ไม่มี `_aug_` ไฟล์\n",
-    "- `build_manifest_v3.py` (v3): **Plan B uniform across regions** → รองรับทั้ง 3 ภาค\n",
+    "เดิม split แบบเดียว (`build_manifest.py`):\n",
+    "- Train: 40 ประโยค → Test: 5 ประโยคที่โมเดลไม่เคยเห็น\n",
+    "- ผลลัพธ์: CER ~37% ❌\n",
     "\n",
-    "v3 ทำอะไร:\n",
-    "- ไฟล์ `_original.wav` (เสียงสะอาด 1 ไฟล์ต่อ speaker) → **test เท่านั้น** (eval บนเสียงสะอาด)\n",
-    "- ไฟล์ variations อื่นๆ (child/female/male/elderly_* + south's `_aug_`) → shuffle 80/10/10 ต่อ speaker\n",
-    "- ทุก speaker ปรากฏใน train, val, test → closed-set evaluation\n",
-    "\n",
-    "ผลลัพธ์ที่คาดหวัง: CER < 10% สำหรับทั้ง 3 ภาค (แยก eval ต่อภาคใน Cell 4.4)"
+    "ใหม่ (`build_manifest_v2.py` — augmentation split):\n",
+    "- ทุก split มีครบ 50 ประโยค แต่ใช้ augmented version ต่างกัน\n",
+    "- ผลลัพธ์ที่คาดหวัง: CER < 10% ✅\n"
    ]
   },
   {
@@ -275,20 +187,11 @@
    "source": [
     "## Cell 2.1 — สร้าง Manifest\n",
     "\n",
-    "รัน script `build_manifest_v3.py` ที่จะสแกน `audio_data/` ทั้ง 3 ภาค (south + north + isan) แล้วสร้าง:\n",
-    "- `manifests/train.jsonl` (~120,000 คลิป)\n",
-    "- `manifests/val.jsonl` (~15,000 คลิป)\n",
-    "- `manifests/test.jsonl` (~15,000 คลิป — รวมไฟล์ `_original.wav` ของทุก speaker สำหรับ eval บนเสียงสะอาด)\n",
-    "- `manifests/dialect_to_central.json` (lookup table 150 ประโยค: 50 ต่อภาค)\n",
-    "\n",
-    "### Strategy: Plan B (สอดคล้องทุกภาค)\n",
-    "\n",
-    "- `_original.wav` (เสียงสะอาด, 1 ไฟล์/speaker) → **test เท่านั้น** เพื่อ eval แบบยุติธรรม\n",
-    "- ไฟล์ variations อื่นๆ (child / female / male / elderly_* + south's `_aug_`) → shuffle 80/10/10 ต่อ speaker\n",
-    "\n",
-    "ความแตกต่างจาก v2:\n",
-    "- v2 ออกแบบสำหรับ south (split `_aug_` files) — north/isan ที่ไม่มี `_aug_` จะตกใน test ทั้งหมด\n",
-    "- v3 treat child/female/male/elderly_* เป็น natural augmentation → ใช้ได้ทั้ง 3 ภาค\n"
+    "รัน script `build_manifest_v2.py` ที่จะสแกน `audio_data/` แล้วสร้าง:\n",
+    "- `manifests/train.jsonl` (~4,000 คลิป)\n",
+    "- `manifests/val.jsonl` (~500 คลิป)\n",
+    "- `manifests/test.jsonl` (~550 คลิป)\n",
+    "- `manifests/dialect_to_central.json` (lookup table 50 ประโยค)\n"
    ]
   },
   {
@@ -297,10 +200,10 @@
    "execution_count": null,
    "outputs": [],
    "source": [
-    "print('🔄 สร้าง manifest แบบ Plan B (3 ภาค: south + north + isan) ...')\n",
-    "!python colab/scripts/build_manifest_v3.py\n",
+    "print('🔄 สร้าง manifest แบบ augmentation split (Path C) ...')\n",
+    "!python colab/scripts/build_manifest_v2.py\n",
     "print('\\n📁 ไฟล์ใน manifests/:')\n",
-    "!ls -la manifests/"
+    "!ls -la manifests/\n"
    ]
   },
   {
@@ -310,10 +213,9 @@
     "## Cell 2.2 — ดูสถิติของ Dataset\n",
     "\n",
     "ตรวจสอบว่า:\n",
-    "- จำนวนคลิปในแต่ละ split ถูกต้อง (train ≫ val ≈ test)\n",
-    "- มีครบทั้ง 3 ภาค (south / north / isan) ในทุก split\n",
+    "- จำนวนคลิปในแต่ละ split ถูกต้อง\n",
     "- Sample rate เป็น 16000 Hz ทั้งหมด\n",
-    "- มีครบ 150 speakers (50 ต่อภาค) ในทุก split\n"
+    "- มีครบ 50 ประโยค (speakers) ในทุก split\n"
    ]
   },
   {
@@ -325,21 +227,14 @@
     "import json\n",
     "from collections import Counter\n",
     "\n",
-    "print(f\"{'Split':<8}{'Clips':>10}{'Speakers':>10}{'Regions':>40}{'Duration':>14}\")\n",
-    "print('-' * 82)\n",
+    "print(f\"{'Split':<8}{'Clips':>8}{'Speakers':>10}{'Sample rates':>20}{'Duration':>12}\")\n",
+    "print(\"-\" * 60)\n",
     "for split in ['train', 'val', 'test']:\n",
     "    rows = [json.loads(l) for l in open(f'manifests/{split}.jsonl', encoding='utf-8')]\n",
-    "    speakers = len({(r['region'], r['speaker_id']) for r in rows})\n",
-    "    regions = Counter(r['region'] for r in rows)\n",
+    "    sr = Counter(r['sample_rate'] for r in rows)\n",
+    "    speakers = len({r['speaker_id'] for r in rows})\n",
     "    total_dur = sum(r['duration'] for r in rows)\n",
-    "    print(f\"{split:<8}{len(rows):>10}{speakers:>10}{str(dict(regions)):>40}{total_dur/60:>11.1f} นาที\")\n",
-    "\n",
-    "# Test set composition (Plan B reserves originals to test)\n",
-    "print('\\n— Test set category mix —')\n",
-    "test_rows = [json.loads(l) for l in open('manifests/test.jsonl', encoding='utf-8')]\n",
-    "cats = Counter(r.get('category', 'unknown') for r in test_rows)\n",
-    "for c, n in sorted(cats.items(), key=lambda x: -x[1]):\n",
-    "    print(f\"  {c:20s}: {n}\")"
+    "    print(f\"{split:<8}{len(rows):>8}{speakers:>10}{str(dict(sr)):>20}{total_dur/60:>9.1f} นาที\")\n"
    ]
   },
   {
@@ -369,7 +264,7 @@
    "source": [
     "## Cell 2.4 — ดู Vocabulary ที่สร้าง\n",
     "\n",
-    "ดูจำนวน token และตัวอักษรไทยทั้งหมด — รวม 3 ภาคจะมีประมาณ 60–70 token (ใต้ ~50, รวมเหนือ + อีสานจะมีตัวอักษรเพิ่ม)\n"
+    "ดูจำนวน token และตัวอักษรไทยทั้งหมด — ควรมีประมาณ 50 token\n"
    ]
   },
   {
@@ -398,36 +293,27 @@
     "# 🏋️ ส่วนที่ 3: Train โมเดล\n",
     "\n",
     "มี 2 cells สำหรับ train:\n",
-    "1. **Sanity check** (3 epochs, originals only, ~10 นาที) — ใช้ทดสอบว่า pipeline ใช้ได้\n",
-    "2. **Full training** (10 epochs, ~120k clips, 20–30 ชม. T4) — เทรนจริง\n",
+    "1. **Sanity check** (5 epochs, ~10 นาที) — ใช้ทดสอบว่า pipeline ใช้ได้\n",
+    "2. **Full training** (30 epochs, 3–5 ชม.) — เทรนจริง\n",
     "\n",
-    "### ⚡ Safe speed optimizations (เปิดอัตโนมัติใน script — ไม่กระทบ accuracy)\n",
+    "## ⚡ Safe speed optimizations (เปิดอัตโนมัติใน script — ไม่กระทบ accuracy)\n",
     "- `group_by_length=True` — จัด batch ให้คลิปยาวใกล้กัน → ลด padding waste\n",
     "- `dataloader_pin_memory=True` — data → GPU เร็วขึ้น\n",
     "\n",
-    "### ⚠️ คำเตือนเรื่อง Colab ฟรี (data ใหญ่ขึ้น 3 เท่าจากเดิม)\n",
-    "\n",
-    "ขนาด train เพิ่มจาก 4,000 → 120,000 clips ทำให้เวลา training นานเกิน 12 ชม. (limit ของ session) — ทางออก:\n",
-    "\n",
-    "1. **Subsample** — ใช้แค่ `_original` + บาง variations (เช่น `--max_per_speaker 200`) — ดูตัวอย่างใน Cell 3.2\n",
-    "2. **ลด epochs** เหลือ 5 (data เยอะแล้ว ไม่ต้อง epoch มาก)\n",
-    "3. **Save checkpoint บ่อยๆ** แล้ว resume ข้าม session\n",
-    "4. **ใช้ Colab Pro/A100** — เร็วกว่า T4 ~3 เท่า\n",
-    "\n",
-    "Keep-alive script ใส่ใน browser console (กด F12):\n",
+    "⚠️ **คำเตือน Colab ฟรี:** อาจ disconnect ระหว่างเทรน 30 epochs ตั้ง keep-alive ใน browser console (กด F12):\n",
     "\n",
     "```javascript\n",
     "setInterval(()=>document.querySelector('colab-toolbar-button#connect')?.click(), 60000)\n",
-    "```"
+    "```\n"
    ]
   },
   {
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## Cell 3.1 — Sanity Check (Optional แต่แนะนำมาก)\n",
+    "## Cell 3.1 — Sanity Check (Optional แต่แนะนำ)\n",
     "\n",
-    "เทรนสั้นๆ 3 epochs บน ~150 ไฟล์ original (50 speakers × 3 ภาค, ไม่รวม variations) เพื่อทดสอบว่า pipeline ทำงานได้\n",
+    "เทรนสั้นๆ 5 epochs บน 50 ไฟล์ original (ไม่รวม augmented) เพื่อทดสอบว่า pipeline ทำงานได้\n",
     "\n",
     "**สิ่งที่ควรเห็น:**\n",
     "- Loss ลดลงเรื่อยๆ (เริ่มต้นประมาณ 8–10, ลงเหลือ 4–5)\n",
@@ -444,11 +330,11 @@
    "source": [
     "!python colab/scripts/train_wav2vec2.py \\\n",
     "    --skip_augmented \\\n",
-    "    --epochs 3 \\\n",
+    "    --epochs 5 \\\n",
     "    --batch_size 4 \\\n",
-    "    --eval_steps 30 \\\n",
-    "    --save_steps 30 \\\n",
-    "    --output_dir models/sanity-check"
+    "    --eval_steps 50 \\\n",
+    "    --save_steps 50 \\\n",
+    "    --output_dir models/sanity-check\n"
    ]
   },
   {
@@ -457,18 +343,19 @@
    "source": [
     "## Cell 3.2 — Full Training\n",
     "\n",
-    "เทรนจริงด้วย hyperparameter ที่เหมาะกับ T4 GPU + multi-dialect data:\n",
+    "เทรนจริงด้วย hyperparameter ที่เหมาะกับ T4 GPU:\n",
     "\n",
     "| Parameter | ค่า | ความหมาย |\n",
     "|---|---|---|\n",
-    "| `--epochs` | 10 | ลดจากเดิม 30 (data เยอะแล้ว) |\n",
-    "| `--batch_size` | 4 | ลดถ้า OOM |\n",
+    "| `--epochs` | 30 | จำนวนรอบที่ดูข้อมูลทั้งหมด |\n",
+    "| `--batch_size` | 4 | จำนวนคลิปต่อ batch (ลดถ้า OOM) |\n",
     "| `--gradient_accumulation_steps` | 4 | จำลอง batch size = 4×4 = 16 |\n",
     "| `--lr` | 3e-4 | Learning rate |\n",
-    "| `--warmup_steps` | 1000 | เพิ่มขึ้น (data ใหญ่) |\n",
-    "| `--save_steps` | 500 | save checkpoint ทุก 500 step (resume ได้ถ้า disconnect) |\n",
+    "| `--warmup_steps` | 500 | จำนวน step ที่ค่อยๆ เพิ่ม lr |\n",
+    "| `--save_steps` | 200 | save checkpoint ทุก 200 step |\n",
     "\n",
-    "**ระยะเวลา:** 20–30 ชั่วโมงบน T4 / 6–10 ชั่วโมงบน A100\n"
+    "**ระยะเวลา:** 3–5 ชั่วโมงบน T4 / 1–2 ชั่วโมงบน A100\n",
+    "(เร็วกว่าเดิมเล็กน้อยจาก group_by_length + pin_memory ที่เปิดอัตโนมัติ)\n"
    ]
   },
   {
@@ -480,14 +367,14 @@
     "!python colab/scripts/train_wav2vec2.py \\\n",
     "    --base_model airesearch/wav2vec2-large-xlsr-53-th \\\n",
     "    --target text_dialect \\\n",
-    "    --epochs 10 \\\n",
+    "    --epochs 30 \\\n",
     "    --batch_size 4 \\\n",
     "    --gradient_accumulation_steps 4 \\\n",
     "    --lr 3e-4 \\\n",
-    "    --warmup_steps 1000 \\\n",
-    "    --eval_steps 500 \\\n",
-    "    --save_steps 500 \\\n",
-    "    --output_dir models/wav2vec2-thai-dialects-v3"
+    "    --warmup_steps 500 \\\n",
+    "    --eval_steps 200 \\\n",
+    "    --save_steps 200 \\\n",
+    "    --output_dir models/wav2vec2-south-th-v2\n"
    ]
   },
   {
@@ -518,7 +405,7 @@
     "from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor\n",
     "import librosa\n",
     "\n",
-    "MODEL_DIR = 'models/wav2vec2-thai-dialects-v3'\n",
+    "MODEL_DIR = 'models/wav2vec2-south-th-v2'\n",
     "device = 'cuda' if torch.cuda.is_available() else 'cpu'\n",
     "\n",
     "processor = Wav2Vec2Processor.from_pretrained(MODEL_DIR)\n",
@@ -526,7 +413,7 @@
     "model.eval()\n",
     "\n",
     "print(f'✅ โมเดลพร้อมใช้บน {device}')\n",
-    "print(f'   Parameters: {sum(p.numel() for p in model.parameters()):,}')"
+    "print(f'   Parameters: {sum(p.numel() for p in model.parameters()):,}')\n"
    ]
   },
   {
@@ -575,9 +462,9 @@
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## Cell 4.3 — ทดสอบกับไฟล์ Original จาก Test Set (1 ภาคต่อ 2 ไฟล์)\n",
+    "## Cell 4.3 — ทดสอบกับ 5 ไฟล์จาก Test Set\n",
     "\n",
-    "ลองถอดเสียงไฟล์ `_original.wav` จากทั้ง 3 ภาค (เลือก 2 ไฟล์ต่อภาค = 6 ไฟล์) แล้วเทียบกับ ground truth\n"
+    "ลองถอดเสียง 5 ไฟล์ (เลือกไฟล์ original ที่ไม่ใช่ augmented) แล้วเทียบกับ ground truth\n"
    ]
   },
   {
@@ -586,48 +473,40 @@
    "execution_count": null,
    "outputs": [],
    "source": [
-    "# เลือก 2 ไฟล์ original จาก test set ต่อภาค\n",
-    "from collections import defaultdict\n",
+    "# เลือก 5 ไฟล์ original จาก test set\n",
     "test_rows = [json.loads(l) for l in open('manifests/test.jsonl', encoding='utf-8')]\n",
-    "originals_by_region = defaultdict(list)\n",
-    "for r in test_rows:\n",
-    "    if r.get('category') in ('original', 'canonical'):\n",
-    "        originals_by_region[r['region']].append(r)\n",
-    "\n",
-    "samples = []\n",
-    "for region in ['south', 'north', 'isan']:\n",
-    "    samples.extend(originals_by_region.get(region, [])[:2])\n",
+    "test_originals = [r for r in test_rows if not r['is_augmented']][:5]\n",
     "\n",
     "print('=' * 70)\n",
-    "for r in samples:\n",
+    "for r in test_originals:\n",
     "    pred = transcribe(r['audio_filepath'])\n",
     "    central, how = to_central(pred)\n",
-    "    print(f\"\\n📁 [{r['region']}] {r['audio_filepath']}\")\n",
+    "    print(f\"\\n📁 {r['audio_filepath']}\")\n",
     "    print(f\"  Ground truth (dialect): {r['text_dialect']}\")\n",
     "    print(f\"  Predicted    (dialect): {pred}\")\n",
     "    print(f\"  Translated   (central): {central}  [{how}]\")\n",
-    "    print(f\"  Expected     (central): {r['text_central']}\")"
+    "    print(f\"  Expected     (central): {r['text_central']}\")\n"
    ]
   },
   {
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "## Cell 4.4 — ประเมินผลบน Test Set (WER + CER แยกตามภาค)\n",
+    "## Cell 4.4 — ประเมินผลบน Test Set ทั้งหมด (WER + CER)\n",
     "\n",
-    "คำนวณตัวชี้วัดบน test set ~15,000 คลิป และแยกผลตามภาค (south / north / isan)\n",
+    "คำนวณตัวชี้วัดบน test set ทั้ง 550 คลิป\n",
     "\n",
     "**ตัวชี้วัด:**\n",
-    "- **WER (Word Error Rate)** — % คำที่ผิด — ในภาษาไทยที่ไม่เว้นวรรค WER มักสูง\n",
+    "- **WER (Word Error Rate)** — % คำที่ผิด — ในภาษาไทยที่ไม่เว้นวรรค WER มักสูง (ใช้ดูแทน CER)\n",
     "- **CER (Character Error Rate)** — % ตัวอักษรที่ผิด — ตัวชี้วัดหลักของไทย\n",
     "\n",
     "**เกณฑ์ CER:**\n",
     "- < 5% = ดีเยี่ยม\n",
     "- 5–15% = ดี\n",
     "- 15–25% = พอใช้\n",
-    "- > 25% = ต้องปรับปรุง\n",
+    "- &gt; 25% = ต้องปรับปรุง\n",
     "\n",
-    "⚠️ ใช้เวลาประมาณ **30–40 นาที** (test set ใหญ่ขึ้น 27 เท่าจากเดิม) — ถ้าต้องการเร็ว ใส่ `SAMPLE = 500` ด้านล่าง\n"
+    "ใช้เวลาประมาณ 2–3 นาที\n"
    ]
   },
   {
@@ -637,47 +516,28 @@
    "outputs": [],
    "source": [
     "import evaluate\n",
-    "from collections import defaultdict\n",
     "\n",
     "wer_metric = evaluate.load('wer')\n",
     "cer_metric = evaluate.load('cer')\n",
     "\n",
     "test_rows = [json.loads(l) for l in open('manifests/test.jsonl', encoding='utf-8')]\n",
     "\n",
-    "# ถ้า test set ใหญ่เกินไป สามารถ subsample ได้\n",
-    "SAMPLE = None   # set to e.g. 1000 เพื่อ eval แค่ subset (เร็วขึ้นมาก)\n",
-    "if SAMPLE:\n",
-    "    import random\n",
-    "    random.seed(0)\n",
-    "    test_rows = random.sample(test_rows, min(SAMPLE, len(test_rows)))\n",
-    "\n",
-    "preds_by_region = defaultdict(list)\n",
-    "refs_by_region = defaultdict(list)\n",
+    "preds, refs = [], []\n",
     "for i, r in enumerate(test_rows):\n",
-    "    if i % 200 == 0:\n",
+    "    if i % 50 == 0:\n",
     "        print(f'  {i}/{len(test_rows)} ...')\n",
     "    pred = transcribe(r['audio_filepath'])\n",
-    "    preds_by_region[r['region']].append(pred)\n",
-    "    refs_by_region[r['region']].append(r['text_dialect'])\n",
+    "    preds.append(pred)\n",
+    "    refs.append(r['text_dialect'])\n",
     "\n",
-    "print('\\n' + '=' * 60)\n",
-    "print(f'📊 ผลลัพธ์ (test = {len(test_rows)} คลิป)')\n",
-    "print('=' * 60)\n",
-    "all_preds, all_refs = [], []\n",
-    "for region in ['south', 'north', 'isan']:\n",
-    "    preds = preds_by_region.get(region, [])\n",
-    "    refs = refs_by_region.get(region, [])\n",
-    "    if not preds:\n",
-    "        continue\n",
-    "    wer = wer_metric.compute(predictions=preds, references=refs)\n",
-    "    cer = cer_metric.compute(predictions=preds, references=refs)\n",
-    "    print(f'[{region:>5s}] n={len(preds):>5}  WER={wer*100:>6.2f}%  CER={cer*100:>6.2f}%')\n",
-    "    all_preds.extend(preds); all_refs.extend(refs)\n",
+    "wer = wer_metric.compute(predictions=preds, references=refs)\n",
+    "cer = cer_metric.compute(predictions=preds, references=refs)\n",
     "\n",
-    "wer = wer_metric.compute(predictions=all_preds, references=all_refs)\n",
-    "cer = cer_metric.compute(predictions=all_preds, references=all_refs)\n",
-    "print('-' * 60)\n",
-    "print(f'[ALL ] n={len(all_preds):>5}  WER={wer*100:>6.2f}%  CER={cer*100:>6.2f}%')"
+    "print('\\n' + '=' * 50)\n",
+    "print(f'📊 ผลลัพธ์ ({len(test_rows)} คลิป)')\n",
+    "print('=' * 50)\n",
+    "print(f'WER: {wer:.4f}  ({wer*100:.2f}%)')\n",
+    "print(f'CER: {cer:.4f}  ({cer*100:.2f}%)')\n"
    ]
   },
   {
@@ -709,10 +569,10 @@
     "\n",
     "# ลบ checkpoint ก่อน save เพื่อประหยัดพื้นที่ (เก็บแค่ final model)\n",
     "print('🗑️  ลบ checkpoint ระหว่างการเทรน ...')\n",
-    "!rm -rf models/wav2vec2-thai-dialects-v3/checkpoint-*\n",
+    "!rm -rf models/wav2vec2-south-th-v2/checkpoint-*\n",
     "\n",
-    "src = f'{WORK_DIR}/models/wav2vec2-thai-dialects-v3'\n",
-    "dst = f'{DRIVE_PATH}/models/wav2vec2-thai-dialects-v3'\n",
+    "src = f'{WORK_DIR}/models/wav2vec2-south-th-v2'\n",
+    "dst = f'{DRIVE_PATH}/models/wav2vec2-south-th-v2'\n",
     "\n",
     "print(f'\\n📤 กำลัง copy {src} → {dst}')\n",
     "if os.path.exists(dst):\n",
@@ -720,7 +580,7 @@
     "shutil.copytree(src, dst)\n",
     "\n",
     "print('\\n✅ Save เสร็จสิ้น ขนาดโมเดล:')\n",
-    "!du -sh \"$dst\""
+    "!du -sh \"$dst\"\n"
    ]
   },
   {
@@ -737,7 +597,7 @@
    "source": [
     "## Cell 6.1 — อัพโหลดไฟล์เสียงทดสอบ\n",
     "\n",
-    "อัพโหลดไฟล์ `.wav` ใดๆ เพื่อทดสอบ — แนะนำให้เป็นเสียงภาษาถิ่น (ใต้/เหนือ/อีสาน) ที่พูด 1 ใน 150 ประโยคที่อยู่ใน lookup table\n",
+    "อัพโหลดไฟล์ `.wav` ใดๆ เพื่อทดสอบ — แนะนำให้เป็นเสียงภาษาใต้ที่พูด 1 ใน 50 ประโยคที่เทรน\n",
     "\n",
     "**คำแนะนำ:** ไฟล์ควรเป็น 16kHz mono ความยาว 1–4 วินาที\n"
    ]
@@ -779,12 +639,12 @@
     "\n",
     "| รูปแบบ | ตัวอย่าง path |\n",
     "|---|---|\n",
-    "| Google Drive folder | `/content/drive/MyDrive/Data_Project/models/wav2vec2-thai-dialects-v3` |\n",
-    "| Local folder | `models/wav2vec2-thai-dialects-v3` หรือ `/path/to/model` |\n",
-    "| Hugging Face Hub | `username/wav2vec2-thai-dialects-v3` |\n",
-    "| ไฟล์ `.zip` | `/content/wav2vec2-thai-dialects-v3.zip` (จะ extract ให้อัตโนมัติ) |\n",
+    "| Google Drive folder | `/content/drive/MyDrive/Data_Project/models/wav2vec2-south-th-v2` |\n",
+    "| Local folder | `models/wav2vec2-south-th-v2` หรือ `/path/to/model` |\n",
+    "| Hugging Face Hub | `username/wav2vec2-south-th-v2` |\n",
+    "| ไฟล์ `.zip` | `/content/wav2vec2-south-th-v2.zip` (จะ extract ให้อัตโนมัติ) |\n",
     "\n",
-    "> ⚠️ ก่อนรัน cell นี้ต้องติดตั้ง libraries แล้ว (Cell 1.4) และ mount Drive ไว้แล้ว (Cell 1.1) ถ้าจะโหลดจาก Drive"
+    "> ⚠️ ก่อนรัน cell นี้ต้องติดตั้ง libraries แล้ว (Cell 1.4) และ mount Drive ไว้แล้ว (Cell 1.1) ถ้าจะโหลดจาก Drive\n"
    ]
   },
   {
@@ -846,8 +706,8 @@
     "    \"\"\"โหลดโมเดล Wav2Vec2 ที่เทรนเสร็จแล้ว เพื่อนำไปใช้ inference\n",
     "\n",
     "    รองรับ 4 รูปแบบ path:\n",
-    "        1. Google Drive: '/content/drive/MyDrive/Data_Project/models/wav2vec2-thai-dialects-v3'\n",
-    "        2. Local folder: 'models/wav2vec2-thai-dialects-v3' หรือ absolute path\n",
+    "        1. Google Drive: '/content/drive/MyDrive/Data_Project/models/wav2vec2-south-th-v2'\n",
+    "        2. Local folder: 'models/wav2vec2-south-th-v2' หรือ absolute path\n",
     "        3. HF Hub:       'username/repo-name'\n",
     "        4. .zip file:    'path/to/model.zip' (จะ extract ให้อัตโนมัติ)\n",
     "\n",
@@ -909,7 +769,7 @@
     "\n",
     "\n",
     "def load_dialect_lookup(lookup_path: str):\n",
-    "    \"\"\"โหลด lookup table สำหรับแปลงภาษาถิ่น → ภาษากลาง\"\"\"\n",
+    "    \"\"\"โหลด lookup table สำหรับแปลงภาษาใต้ → ภาษากลาง\"\"\"\n",
     "    lookup = json.load(open(lookup_path, encoding='utf-8'))\n",
     "\n",
     "    def to_central(text: str):\n",
@@ -923,7 +783,7 @@
     "    return to_central\n",
     "\n",
     "\n",
-    "print('✅ ฟังก์ชันพร้อมใช้: load_trained_model() (รองรับ .zip), make_transcribe_fn(), load_dialect_lookup()')"
+    "print('✅ ฟังก์ชันพร้อมใช้: load_trained_model() (รองรับ .zip), make_transcribe_fn(), load_dialect_lookup()')\n"
    ]
   },
   {
@@ -936,18 +796,18 @@
     "\n",
     "```python\n",
     "# 1. โหลดจาก Google Drive folder (กรณีกลับมาเปิด session ใหม่)\n",
-    "MODEL_PATH = '/content/drive/MyDrive/Data_Project/models/wav2vec2-thai-dialects-v3'\n",
+    "MODEL_PATH = '/content/drive/MyDrive/Data_Project/models/wav2vec2-south-th-v2'\n",
     "\n",
     "# 2. โหลดจาก local Colab disk (กรณีเพิ่งเทรนเสร็จใน session นี้)\n",
-    "# MODEL_PATH = 'models/wav2vec2-thai-dialects-v3'\n",
+    "# MODEL_PATH = 'models/wav2vec2-south-th-v2'\n",
     "\n",
     "# 3. โหลดจาก Hugging Face Hub\n",
-    "# MODEL_PATH = 'your-username/wav2vec2-thai-dialects-v3'\n",
+    "# MODEL_PATH = 'your-username/wav2vec2-south-th-v2'\n",
     "\n",
     "# 4. โหลดจากไฟล์ .zip (เช่นโหลดจาก Drive ผ่านเว็บ → ได้เป็น zip)\n",
-    "# MODEL_PATH = '/content/wav2vec2-thai-dialects-v3.zip'\n",
-    "# (จะ extract ให้อัตโนมัติที่ '/content/wav2vec2-thai-dialects-v3_extracted')\n",
-    "```"
+    "# MODEL_PATH = '/content/wav2vec2-south-th-v2.zip'\n",
+    "# (จะ extract ให้อัตโนมัติที่ '/content/wav2vec2-south-th-v2_extracted')\n",
+    "```\n"
    ]
   },
   {
@@ -957,7 +817,7 @@
    "outputs": [],
    "source": [
     "# กำหนด path ของโมเดล (แก้ตามที่เก็บไว้)\n",
-    "MODEL_PATH = '/content/drive/MyDrive/Data_Project/models/wav2vec2-thai-dialects-v3'\n",
+    "MODEL_PATH = '/content/drive/MyDrive/Data_Project/models/wav2vec2-south-th-v2'\n",
     "\n",
     "# (Optional) path ไปยัง lookup table สำหรับแปลงเป็นภาษากลาง\n",
     "LOOKUP_PATH = '/content/drive/MyDrive/Data_Project/manifests/dialect_to_central.json'\n",
@@ -971,17 +831,15 @@
     "# 3. (Optional) โหลด lookup table สำหรับแปลงภาษา\n",
     "to_central = load_dialect_lookup(LOOKUP_PATH) if os.path.exists(LOOKUP_PATH) else None\n",
     "\n",
-    "# 4. ทดสอบกับไฟล์เสียง 1 ไฟล์ (ปลด comment + แก้ path)\n",
-    "# WAV_PATH = '/content/drive/MyDrive/Data_Project/audio_data/south/voice_1/voice_1_1_0000_original.wav'\n",
-    "# WAV_PATH = '/content/drive/MyDrive/Data_Project/audio_data/north/1/1._0000_original.wav'\n",
-    "# WAV_PATH = '/content/drive/MyDrive/Data_Project/audio_data/isan/1/1_0000_original.wav'\n",
+    "# 4. ทดสอบกับไฟล์เสียง 1 ไฟล์\n",
+    "# WAV_PATH = '/content/drive/MyDrive/Data_Project/audio_data/south/voice_01/voice_01.wav'\n",
     "# pred = transcribe(WAV_PATH)\n",
     "# print(f'Dialect: {pred}')\n",
     "# if to_central:\n",
     "#     central, how = to_central(pred)\n",
     "#     print(f'Central: {central}  [{how}]')\n",
     "\n",
-    "print('\\n💡 ปลด comment ตัวอย่างด้านล่างและใส่ path ไฟล์ .wav เพื่อทดสอบ')"
+    "print('\\n💡 ปลด comment ตัวอย่างด้านล่างและใส่ path ไฟล์ .wav เพื่อทดสอบ')\n"
    ]
   },
   {
@@ -997,12 +855,10 @@
     "|---|---|\n",
     "| `CUDA out of memory` | ลด `--batch_size` เหลือ 2 + เพิ่ม `--gradient_accumulation_steps 8` |\n",
     "| `Loss = NaN` | ลด `--lr` เหลือ `1e-4` |\n",
-    "| `WER ไม่ลด` | เช็คว่า vocab สร้างถูก (Cell 2.4), ลอง sanity check (Cell 3.1) ก่อน |\n",
-    "| `Disk เต็ม` (Colab disk 100GB) | ลบ checkpoint: `!rm -rf models/wav2vec2-thai-dialects-v3/checkpoint-*` |\n",
-    "| Copy data ช้ามาก (Cell 1.2) | ใช้ `--reflink=auto` ไม่ได้บน Colab — รอ shutil.copytree (15–25 นาที สำหรับ ~5GB) |\n",
+    "| `WER ไม่ลด` | เช็คว่า vocab สร้างถูก, ลอง sanity check (Cell 3.1) ก่อน |\n",
+    "| `Disk เต็ม` | ลบ checkpoint: `!rm -rf models/wav2vec2-south-th-v2/checkpoint-*` |\n",
     "| `config.json not found` ตอน inference | โมเดลยังไม่เทรนเสร็จ — รัน Cell 3.2 ให้จบก่อน |\n",
     "| Colab disconnect ระหว่างเทรน | ใส่ keep-alive script ใน browser console (F12) |\n",
-    "| ไฟล์ `_aug_` ไม่อยู่ใน north/isan | ปกติ — Plan B treat child/female/male/elderly_* เป็น augmentation แทน |\n",
     "\n",
     "## การ Resume Training (ถ้า disconnect)\n",
     "\n",
@@ -1012,14 +868,14 @@
     "!python colab/scripts/train_wav2vec2.py \\\\\n",
     "    --base_model airesearch/wav2vec2-large-xlsr-53-th \\\\\n",
     "    --target text_dialect \\\\\n",
-    "    --epochs 10 \\\\\n",
+    "    --epochs 30 \\\\\n",
     "    --batch_size 4 \\\\\n",
     "    --gradient_accumulation_steps 4 \\\\\n",
-    "    --output_dir models/wav2vec2-thai-dialects-v3 \\\\\n",
-    "    --resume_from_checkpoint models/wav2vec2-thai-dialects-v3/checkpoint-XXXX\n",
+    "    --output_dir models/wav2vec2-south-th-v2 \\\\\n",
+    "    --resume_from_checkpoint models/wav2vec2-south-th-v2/checkpoint-XXXX\n",
     "```\n",
     "\n",
-    "(แทน `XXXX` ด้วยเลข checkpoint ล่าสุด — ดูจาก `!ls models/wav2vec2-thai-dialects-v3/`)\n",
+    "(แทน `XXXX` ด้วยเลข checkpoint ล่าสุด — ดูจาก `!ls models/wav2vec2-south-th-v2/`)\n",
     "\n",
     "## เคล็ดลับ Colab ฟรี\n",
     "\n",
@@ -1028,8 +884,7 @@
     "  ```javascript\n",
     "  setInterval(()=>document.querySelector('colab-toolbar-button#connect')?.click(), 60000)\n",
     "  ```\n",
-    "- **Save บ่อยๆ**: ตั้ง `--save_steps 500` แล้ว save ลง Drive ทุก checkpoint สำคัญ\n",
-    "- **เลือก subsample** สำหรับการเทรนแรก: รันด้วย data ส่วนหนึ่งเพื่อ verify loss curve healthy ก่อนใช้ data เต็ม"
+    "- **Save บ่อยๆ**: ตั้ง `--save_steps 200` แล้ว save ลง Drive ทุก checkpoint สำคัญ\n"
    ]
   }
  ]

@@ -9,7 +9,9 @@
 1. เปิด [drive.google.com](https://drive.google.com)
 2. สร้าง folder `Data_Project` ที่ My Drive
 3. อัพโหลด **ทั้งโฟลเดอร์ Data_Project** ขึ้นไป (จะมี `audio_data/`, `manifests/`, `colab/`, ฯลฯ)
-4. รอจนอัพโหลดเสร็จ — ขนาดประมาณ 250–300 MB อาจใช้เวลา 5–15 นาที
+4. รอจนอัพโหลดเสร็จ — ขนาดประมาณ **3–5 GB** หลังเพิ่ม north + isan (อาจใช้เวลา 1–2 ชม. แล้วแต่ความเร็วเน็ต)
+
+   💡 ทางลัด: zip โฟลเดอร์ `Data_Project` ก่อนอัพ จะเร็วกว่าเยอะ → แตก zip บน Colab ใน Cell 1.2
 
 ### 2. เปิด Notebook
 
@@ -38,9 +40,11 @@
 
 ### 5. Tips
 
-- **ทำ sanity check ก่อน** (cell #6) ใช้เวลาเพียง 10–15 นาที — ถ้าไม่ผ่าน อย่าเสียเวลาเทรนเต็ม
-- **Colab ฟรีอาจ disconnect** ระหว่างเทรนเต็ม — ตั้ง `--save_steps 200` ไว้ จะ resume ได้
-- **Save model กลับ Drive** ก่อนปิด session เสมอ (cell #11)
+- **ทำ sanity check ก่อน** (Cell 3.1) ใช้เวลาเพียง 10–15 นาที — ถ้าไม่ผ่าน อย่าเสียเวลาเทรนเต็ม
+- **Multi-dialect data ใหญ่ขึ้นมาก** (~120k train clips, 3 ภาครวมกัน) — Colab ฟรีไม่พอเทรนเต็ม 10 epochs ในรอบเดียว
+- ตั้ง `--save_steps 500` ไว้ จะ resume ได้หลัง disconnect (ใช้ `--resume_from_checkpoint`)
+- **Save model กลับ Drive** ก่อนปิด session เสมอ (Cell 5.1)
+- Notebook ใช้ `build_manifest_v3.py` (Plan B) — รองรับทั้ง 3 ภาคพร้อมกัน
 
 ## ทางเลือก: ใช้ Kaggle Notebooks
 
