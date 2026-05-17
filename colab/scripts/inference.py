@@ -34,7 +34,9 @@ import librosa
 import torch
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 
-ROOT = Path(__file__).resolve().parent.parent
+# Script lives at <project_root>/colab/scripts/inference.py
+# so we need 3 ``.parent`` hops to reach the project root.
+ROOT = Path(__file__).resolve().parent.parent.parent
 LOOKUP_PATH = ROOT / "manifests" / "dialect_to_central.json"
 
 

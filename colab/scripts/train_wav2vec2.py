@@ -47,7 +47,9 @@ from transformers import (
 
 import evaluate
 
-ROOT = Path(__file__).resolve().parent.parent
+# Script lives at <project_root>/colab/scripts/train_wav2vec2.py
+# so we need 3 ``.parent`` hops to reach the project root.
+ROOT = Path(__file__).resolve().parent.parent.parent
 MANIFESTS = ROOT / "manifests"
 VOCAB_PATH = ROOT / "models" / "vocab" / "vocab.json"
 
@@ -120,6 +122,11 @@ def main():
         help="Train only on original (non-augmented) clips",
     )
     ap.add_argument("--num_workers", type=int, default=4)
+    ap.add_argument(
+        "--resume_from_checkpoint",
+        default=None,
+        help="Path to a checkpoint folder (e.g. models/.../checkpoint-1500) to resume from",
+    )
     args = ap.parse_args()
 
     # ------------------------------------------------------------------
@@ -247,7 +254,11 @@ def main():
         tokenizer=processor.feature_extractor,
     )
 
-    trainer.train()
+    if args.resume_from_checkpoint:
+        print(f"▶ Resuming from checkpoint: {args.resume_from_checkpoint}")
+        trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+    else:
+        trainer.train()
     trainer.save_model(args.output_dir)
     processor.save_pretrained(args.output_dir)
     print(f"\nDone. Best model saved to: {args.output_dir}")

@@ -14,7 +14,9 @@ import argparse
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+# Script lives at <project_root>/colab/scripts/prepare_vocab.py
+# so we need 3 ``.parent`` hops to reach the project root.
+ROOT = Path(__file__).resolve().parent.parent.parent
 MANIFESTS = ROOT / "manifests"
 OUT_DIR = ROOT / "models" / "vocab"
 
