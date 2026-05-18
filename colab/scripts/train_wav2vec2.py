@@ -37,6 +37,7 @@ import numpy as np
 import torch
 from datasets import Audio, load_dataset
 from transformers import (
+    EarlyStoppingCallback,
     Trainer,
     TrainerCallback,
     TrainingArguments,
@@ -58,7 +59,7 @@ class CleanProgressCallback(TrainerCallback):
 
     def __init__(self):
         self.t_start = None
-        self.best_wer = float("inf")
+        self.best_cer = float("inf")   # ใช้ CER เป็น primary metric สำหรับ Thai
         self.prev_loss = None
 
     def on_train_begin(self, args, state, control, **kwargs):
@@ -75,19 +76,19 @@ class CleanProgressCallback(TrainerCallback):
         total = state.max_steps
         pct = 100.0 * step / total
 
-        # eval log (มี eval_loss/eval_wer)
-        if "eval_wer" in logs:
-            wer = logs["eval_wer"]
-            cer = logs.get("eval_cer", float("nan"))
+        # eval log (มี eval_loss/eval_cer)
+        if "eval_cer" in logs:
+            cer = logs["eval_cer"]
+            wer = logs.get("eval_wer", float("nan"))
             eval_loss = logs.get("eval_loss", float("nan"))
             marker = ""
-            if wer < self.best_wer:
-                self.best_wer = wer
+            if cer < self.best_cer:
+                self.best_cer = cer
                 marker = " ⭐ NEW BEST"
             print(
                 f"\n📊 [EVAL  @ step {step:>5}/{total} | {pct:5.1f}%] "
-                f"WER={wer:.4f} | CER={cer:.4f} | loss={eval_loss:.4f}"
-                f" | best_WER={self.best_wer:.4f}{marker}\n"
+                f"CER={cer:.4f} | WER={wer:.4f} | loss={eval_loss:.4f}"
+                f" | best_CER={self.best_cer:.4f}{marker}\n"
             )
             return
 
@@ -114,7 +115,7 @@ class CleanProgressCallback(TrainerCallback):
         total_time = time.time() - self.t_start
         h, m = int(total_time // 3600), int((total_time % 3600) // 60)
         print(f"\n{'='*72}")
-        print(f"✅ Training เสร็จ | ใช้เวลา {h}h{m:02d}m | best WER={self.best_wer:.4f}")
+        print(f"✅ Training เสร็จ | ใช้เวลา {h}h{m:02d}m | best CER={self.best_cer:.4f}")
         print(f"{'='*72}\n")
 
 # Script lives at <project_root>/colab/scripts/train_wav2vec2.py
@@ -269,9 +270,12 @@ def main():
     wer_metric = evaluate.load("wer")
     cer_metric = evaluate.load("cer")
 
+    def preprocess_logits_for_metrics(logits, labels):
+        """Argmax บน GPU ทันที — ลด memory จาก (B, T, V) เป็น (B, T)"""
+        return torch.argmax(logits, dim=-1)
+
     def compute_metrics(pred):
-        pred_logits = pred.predictions
-        pred_ids = np.argmax(pred_logits, axis=-1)
+        pred_ids = pred.predictions  # ถูก argmax มาแล้วจาก preprocess_logits_for_metrics
 
         labels = pred.label_ids
         labels[labels == -100] = processor.tokenizer.pad_token_id
@@ -304,7 +308,7 @@ def main():
         warmup_steps=args.warmup_steps,
         save_total_limit=3,
         load_best_model_at_end=True,
-        metric_for_best_model="wer",
+        metric_for_best_model="cer",   # CER เหมาะกับ Thai (ไม่มี space แบ่งคำ)
         greater_is_better=False,
         report_to="none",
         # ── Safe speed optimizations (no accuracy impact) ──────────────────
@@ -320,10 +324,14 @@ def main():
         data_collator=data_collator,
         args=training_args,
         compute_metrics=compute_metrics,
+        preprocess_logits_for_metrics=preprocess_logits_for_metrics,
         train_dataset=ds["train"],
         eval_dataset=ds["val"],
         tokenizer=processor.feature_extractor,
-        callbacks=[CleanProgressCallback()],
+        callbacks=[
+            CleanProgressCallback(),
+            EarlyStoppingCallback(early_stopping_patience=3),  # หยุดถ้า CER ไม่ดีขึ้น 3 evals ติด
+        ],
     )
 
     if args.resume_from_checkpoint:
