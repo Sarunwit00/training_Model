@@ -38,7 +38,6 @@ import torch
 from datasets import Audio, load_dataset
 from transformers import (
     Trainer,
-    TrainerCallback,
     TrainingArguments,
     Wav2Vec2CTCTokenizer,
     Wav2Vec2FeatureExtractor,
@@ -47,75 +46,6 @@ from transformers import (
 )
 
 import evaluate
-import time
-
-
-# ───────────────────────────────────────────────────────────────────────────
-# Clean one-line progress callback — แสดงเฉพาะค่าสำคัญ ไม่รก
-# ───────────────────────────────────────────────────────────────────────────
-class CleanProgressCallback(TrainerCallback):
-    """พิมพ์บรรทัดเดียวสรุปสถานะทุก logging_steps + บรรทัดเด่นตอน eval"""
-
-    def __init__(self):
-        self.t_start = None
-        self.best_wer = float("inf")
-        self.prev_loss = None
-
-    def on_train_begin(self, args, state, control, **kwargs):
-        self.t_start = time.time()
-        total = state.max_steps
-        print(f"\n{'='*72}")
-        print(f"🚀 เริ่ม training | total_steps={total} | epochs={args.num_train_epochs}")
-        print(f"{'='*72}\n")
-
-    def on_log(self, args, state, control, logs=None, **kwargs):
-        if logs is None or state.max_steps == 0:
-            return
-        step = state.global_step
-        total = state.max_steps
-        pct = 100.0 * step / total
-
-        # eval log (มี eval_loss/eval_wer)
-        if "eval_wer" in logs:
-            wer = logs["eval_wer"]
-            cer = logs.get("eval_cer", float("nan"))
-            eval_loss = logs.get("eval_loss", float("nan"))
-            marker = ""
-            if wer < self.best_wer:
-                self.best_wer = wer
-                marker = " ⭐ NEW BEST"
-            print(
-                f"\n📊 [EVAL  @ step {step:>5}/{total} | {pct:5.1f}%] "
-                f"WER={wer:.4f} | CER={cer:.4f} | loss={eval_loss:.4f}"
-                f" | best_WER={self.best_wer:.4f}{marker}\n"
-            )
-            return
-
-        # train log (มี loss)
-        if "loss" in logs:
-            loss = logs["loss"]
-            lr = logs.get("learning_rate", 0)
-            epoch = logs.get("epoch", 0)
-            elapsed = time.time() - self.t_start
-            eta = elapsed * (total - step) / max(step, 1)
-            eta_h, eta_m = int(eta // 3600), int((eta % 3600) // 60)
-            trend = ""
-            if self.prev_loss is not None:
-                delta = loss - self.prev_loss
-                trend = f" {'↓' if delta < 0 else '↑'}{abs(delta):.3f}"
-            self.prev_loss = loss
-            print(
-                f"  step {step:>5}/{total} ({pct:5.1f}%) | "
-                f"epoch {epoch:5.2f} | loss {loss:.4f}{trend} | "
-                f"lr {lr:.2e} | ETA {eta_h}h{eta_m:02d}m"
-            )
-
-    def on_train_end(self, args, state, control, **kwargs):
-        total_time = time.time() - self.t_start
-        h, m = int(total_time // 3600), int((total_time % 3600) // 60)
-        print(f"\n{'='*72}")
-        print(f"✅ Training เสร็จ | ใช้เวลา {h}h{m:02d}m | best WER={self.best_wer:.4f}")
-        print(f"{'='*72}\n")
 
 # Script lives at <project_root>/colab/scripts/train_wav2vec2.py
 # so we need 3 ``.parent`` hops to reach the project root.
@@ -298,8 +228,7 @@ def main():
         fp16=torch.cuda.is_available(),
         save_steps=args.save_steps,
         eval_steps=args.eval_steps,
-        logging_steps=100,             # พิมพ์ progress ทุก 100 step (~ทุก 1-2 นาที)
-        disable_tqdm=True,             # ปิด progress bar เริ่มต้น (ใช้ callback แทน)
+        logging_steps=50,
         learning_rate=args.lr,
         warmup_steps=args.warmup_steps,
         save_total_limit=3,
@@ -323,7 +252,6 @@ def main():
         train_dataset=ds["train"],
         eval_dataset=ds["val"],
         tokenizer=processor.feature_extractor,
-        callbacks=[CleanProgressCallback()],
     )
 
     if args.resume_from_checkpoint:
