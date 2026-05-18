@@ -141,8 +141,6 @@ def collect_samples():
 
 def split_per_speaker(samples):
     """Plan B: originals → test, shuffle rest 80/10/10 per speaker."""
-    rng = random.Random(SEED)
-
     by_speaker = {}
     for s in samples:
         by_speaker.setdefault((s["region"], s["speaker_id"]), []).append(s)
@@ -152,8 +150,11 @@ def split_per_speaker(samples):
         originals = [s for s in items if s["category"] in ("original", "canonical")]
         rest = [s for s in items if s["category"] not in ("original", "canonical")]
 
-        # Deterministic shuffle (per-speaker seed via key hash for stability)
-        local_rng = random.Random((SEED, key))
+        # Deterministic shuffle (per-speaker seed for stability).
+        # Use a STRING seed because Python 3.12 dropped support for tuples
+        # as random.Random seeds — only None/int/float/str/bytes/bytearray.
+        region, speaker_id = key
+        local_rng = random.Random(f"{SEED}-{region}-{speaker_id}")
         local_rng.shuffle(rest)
 
         n = len(rest)
