@@ -9,8 +9,8 @@
 ```
 [1] เครื่องคุณ           [2] Google Drive          [3] Colab
 ─────────────────      ────────────────         ──────────────
-zip_for_colab.py   →   Data_Project.zip    →   notebook auto-extract
-(สร้าง zip)            (อัพโหลด ~3-5 GB)         + auto-resume
+zip_for_colab.py   →   Data_Project.zip    →   notebook extract zip
+(สร้าง zip)            (อัพโหลด ~3-5 GB)         + auto-resume training
 ```
 
 ---
@@ -59,7 +59,7 @@ Script จะใส่เฉพาะ `audio_data/` + `colab/` (ข้าม `ve
 | Cell | ทำอะไร | เวลา (T4) |
 |---|---|---|
 | 1.1 | Mount Google Drive | ~30 วินาที |
-| 1.2 | Extract zip + สร้าง Drive cache | **ครั้งแรก: 30-50 นาที**, รอบหลัง: 3-5 นาที |
+| 1.2 | Extract zip จาก Drive ลง Colab disk | 5-10 นาที |
 | 1.3 | ตรวจ GPU | ทันที |
 | 1.4 | ติดตั้ง libraries | ~3 นาที |
 | 2.1-2.4 | Build manifest + vocab | ~5 นาที |
@@ -69,11 +69,6 @@ Script จะใส่เฉพาะ `audio_data/` + `colab/` (ข้าม `ve
 ---
 
 ## Features ที่ช่วยให้รันสะดวก (built-in)
-
-### 💾 Drive Cache สำหรับ Dataset
-ครั้งแรกที่รัน Cell 1.2 จะ copy dataset ที่ extract แล้วไปไว้บน Drive ด้วย
-รอบถัดไปหลัง disconnect จะ copy จาก cache (เร็วกว่า extract zip ~5-10 เท่า)
-ใช้พื้นที่ Drive เพิ่ม ~3-5 GB — ตั้ง `USE_CACHE = False` ใน Cell 1.2 ถ้าไม่ต้องการ
 
 ### 📦 Checkpoint บน Drive + Auto-Resume
 Cell 3.2 บันทึก checkpoint ไปที่ `/content/drive/MyDrive/Data_Project/models/wav2vec2-thai-dialects-v3/` โดยตรง
@@ -97,11 +92,10 @@ Cell 3.2 บันทึก checkpoint ไปที่ `/content/drive/MyDrive/D
 
 1. กด `Connect` ใหม่ (Colab จะให้ runtime ใหม่)
 2. รัน Cell 1.1 (mount Drive)
-3. รัน Cell 1.2 (จะ copy จาก Drive cache ~3-5 นาที)
+3. รัน Cell 1.2 (extract zip ใหม่ ~5-10 นาที)
 4. รัน Cell 1.3, 1.4 (ตรวจ GPU + libraries)
-5. ข้ามไปรัน Cell 3.2 — จะ resume จาก checkpoint ล่าสุดบน Drive อัตโนมัติ
-
-ไม่ต้องรัน manifest/vocab ใหม่ เพราะ Drive cache มีอยู่แล้ว
+5. รัน Cell 2.1-2.4 (build manifest + vocab ใหม่ ~5 นาที)
+6. รัน Cell 3.2 — จะ resume จาก checkpoint ล่าสุดบน Drive อัตโนมัติ
 
 ---
 

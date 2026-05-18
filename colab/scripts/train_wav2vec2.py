@@ -35,6 +35,21 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 import torch
+
+# ───────────────────────────────────────────────────────────────────────────
+# Fix PyTorch 2.6+ checkpoint loading (UnpicklingError: Weights only load failed)
+# PyTorch 2.6 เปลี่ยน default ของ torch.load() เป็น weights_only=True เพื่อความปลอดภัย
+# แต่ทำให้ Trainer โหลด rng_state.pth (ที่มี numpy types) ไม่ได้ตอน resume_from_checkpoint
+#
+# วิธีแก้: monkey-patch torch.load ให้ default กลับเป็น weights_only=False
+# ปลอดภัยเพราะเราเทรน + สร้าง checkpoint เอง (ไม่ได้โหลดจากแหล่งภายนอก)
+# ───────────────────────────────────────────────────────────────────────────
+_original_torch_load = torch.load
+def _torch_load_legacy(*args, **kwargs):
+    kwargs.setdefault("weights_only", False)
+    return _original_torch_load(*args, **kwargs)
+torch.load = _torch_load_legacy
+
 from datasets import Audio, load_dataset
 from transformers import (
     EarlyStoppingCallback,
